@@ -1,0 +1,7 @@
+Flask
+gTTS
+requests
+yt-dlp
+google-generativeai
+mutagen
+gunicorn

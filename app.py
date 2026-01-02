@@ -1,4 +1,4 @@
-print("--- [SISTEMA FINAL] RADIO SUEÑO PRO (v14.0: CLOUD READY) ---")
+print("--- [SISTEMA FINAL] RADIO SUEÑO PRO (v15.0: CLOUD FIXED) ---")
 from flask import Flask, render_template, jsonify, request
 from gtts import gTTS
 import os
@@ -12,8 +12,10 @@ import google.generativeai as genai
 from mutagen.mp3 import MP3
 import re 
 import threading 
+import imageio_ffmpeg # <--- NUEVO: Para que funcione en la nube
 
-app = Flask(__name__)
+# Configuración explícita de carpetas para evitar errores en Render
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # ==========================================
 # 🔑 TU API KEY
@@ -130,7 +132,7 @@ def buscar_portada_itunes(termino):
     except: pass
     return None
 
-# --- DESCARGA CON FILTRO DE DURACIÓN ---
+# --- DESCARGA ARREGLADA PARA LA NUBE ---
 def descargar_cancion(input_usuario, es_automatico=False, ignorar_repetidas=False):
     try:
         limpiar_archivos_antiguos()
@@ -152,10 +154,10 @@ def descargar_cancion(input_usuario, es_automatico=False, ignorar_repetidas=Fals
             'format': 'bestaudio/best', 
             'outtmpl': 'static/%(title)s.%(ext)s', 
             'postprocessors': [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192'}], 
-            'ffmpeg_location': './', 
+            # FIX PARA LA NUBE: Usamos el ffmpeg de la librería imageio
+            'ffmpeg_location': imageio_ffmpeg.get_ffmpeg_exe(), 
             'quiet': True, 
             'ignoreerrors': True,
-            # FILTRO: Menos de 8 min (480s) y más de 1 min (60s)
             'match_filter': 'duration < 480 & duration > 60' 
         }
         
@@ -298,87 +300,7 @@ def actualizar_programacion():
     finally:
         en_proceso_de_cambio = False
 
-@app.route('/')
-def pagina_principal(): return render_template('index.html')
-
-@app.route('/sincronizar')
-def sincronizar():
-    actualizar_programacion()
-    ip = request.remote_addr
-    usuarios_conectados[ip] = time.time()
-    num_oyentes = len([ip for ip, t in usuarios_conectados.items() if time.time() - t < 10])
-    cola_combinada = cola_humanos + cola_ia
-    cola_bonita = [limpiar_titulo_pro(c) for c in cola_combinada]
-    offset = time.time() - estado_radio["hora_inicio_timestamp"]
-    if offset > estado_radio["duracion_total"]: offset = 0
-    mensaje_data = None
-    if mensaje_overlay["archivo"] and time.time() < mensaje_overlay["expiracion"]:
-        mensaje_data = mensaje_overlay
-    return jsonify({
-        "archivo": estado_radio["archivo_actual"],
-        "titulo": estado_radio["titulo_actual"],
-        "artista": estado_radio["artista_actual"],
-        "imagen": estado_radio["imagen_actual"],
-        "segundo_actual": offset,
-        "duracion_total": estado_radio["duracion_total"],
-        "oyentes": num_oyentes,
-        "cola": cola_bonita,
-        "historial": historial_visual,
-        "mensaje_overlay": mensaje_data
-    })
-
-@app.route('/admin/saltar', methods=['POST'])
-def admin_saltar():
-    if request.json.get('clave') == CLAVE_ADMIN:
-        estado_radio["duracion_total"] = 0 
-        return jsonify({"status": "ok"})
-    return jsonify({"status": "error"})
-
-@app.route('/admin/borrar', methods=['POST'])
-def admin_borrar():
-    if request.json.get('clave') == CLAVE_ADMIN:
-        idx = int(request.json.get('indice'))
-        if idx < len(cola_humanos):
-            cola_humanos.pop(idx)
-        elif idx < len(cola_humanos) + len(cola_ia):
-            cola_ia.pop(idx - len(cola_humanos))
-        return jsonify({"status": "ok"})
-    return jsonify({"status": "error"})
-
-@app.route('/descargar_youtube', methods=['POST'])
-def ruta_descargar():
-    data = request.json
-    exito, titulo, lista_archivos = descargar_cancion(data.get('link'), es_automatico=False, ignorar_repetidas=True)
-    if exito and lista_archivos:
-        cola_humanos.append(lista_archivos[0]) 
-        return jsonify({"status": "ok", "titulo": titulo})
-    return jsonify({"status": "error"})
-
-@app.route('/mandar_saludo', methods=['POST'])
-def recibir_saludo():
-    global mensaje_overlay
-    data = request.json
-    nombre = data.get('nombre', 'Anónimo')
-    texto = data.get('texto')
-    texto_completo = f"{nombre} dice: {texto}"
-    
-    archivo_msg = "static/mensaje_live.mp3"
-    try:
-        tts = gTTS(text=texto_completo + " . . .", lang='es', tld='com.mx')
-        tts.save(archivo_msg)
-        duracion = obtener_duracion(archivo_msg)
-        mensaje_overlay["archivo"] = f"mensaje_live.mp3?v={int(time.time())}"
-        mensaje_overlay["id"] = int(time.time()) 
-        mensaje_overlay["expiracion"] = time.time() + duracion + 5 
-        print(f"📢 MENSAJE LIVE: {texto_completo}")
-        return jsonify({"status": "ok"})
-    except:
-        return jsonify({"status": "error"})
-
-# --- PROTECCIÓN PARA LA NUBE (IMPORTANTE) ---
 if __name__ == '__main__':
-    # Esto solo se ejecuta en tu PC
-    # En la nube, Gunicorn arranca la app directamente y salta este bloque
     hostname = socket.gethostname()
     try:
         ip_local = socket.gethostbyname(hostname)

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radio Sueño: Spider-Verse</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --miles-black: #050505;
+            --miles-red: #ff0055;
+            --gwen-blue: #00e5ff;
+            --gwen-pink: #ff00cc;
+            --glitch-green: #ccff00;
+        }
+
+        body {
+            background-color: var(--miles-black);
+            color: white;
+            font-family: 'Roboto Mono', monospace;
+            text-align: center;
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center;
+            padding-bottom: 80px; 
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(rgba(40, 40, 40, 0.5) 2px, transparent 2px),
+                linear-gradient(to bottom, #050505, #111);
+            background-size: 20px 20px, 100% 100%;
+        }
+
+        h2 { 
+            font-family: 'Bangers', cursive; font-size: 2.5em; margin: 10px 0; letter-spacing: 2px;
+            text-shadow: 3px 3px 0px var(--gwen-blue), -3px -3px 0px var(--miles-red);
+            animation: glitch-skew 3s infinite linear alternate-reverse;
+        }
+
+        h3 { 
+            font-family: 'Permanent Marker', cursive; color: var(--glitch-green); margin: 0; 
+            font-size: 1.2em; transform: rotate(-2deg); 
+        }
+
+        .album-art {
+            width: 260px; height: 260px; margin-top: 20px; object-fit: cover; 
+            border: 4px solid white; box-shadow: 10px 10px 0px var(--gwen-pink); 
+            transition: transform 0.2s;
+        }
+        .playing { animation: latido-comic 0.8s infinite; }
+        
+        @keyframes latido-comic { 
+            0% {transform: scale(1) rotate(0deg);} 50% {transform: scale(1.02) rotate(1deg);} 100% {transform: scale(1) rotate(0deg);} 
+        }
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); }
+            60% { transform: skew(0deg); } 80% { transform: skew(1deg); } 100% { transform: skew(0deg); }
+        }
+
+        #barra-progreso {
+            width: 85%; height: 8px; background: #222; margin-top: 20px; 
+            border: 2px solid white; transform: skewX(-10deg);
+        }
+        #progreso-relleno { 
+            width: 0%; height: 100%; 
+            background: linear-gradient(90deg, var(--miles-red), var(--gwen-pink)); 
+            box-shadow: 0 0 10px var(--miles-red);
+        }
+
+        /* --- OPTIMIZACIÓN: Fuente 16px evita zoom automático en iPhone --- */
+        input[type=text] { 
+            background: transparent; border: none; flex: 1; 
+            padding: 10px; outline: none; font-family: 'Roboto Mono', monospace; font-weight: bold;
+            font-size: 16px; /* CRUCIAL PARA IOS */
+        }
+        .input-group input[type=text] { color: black; }
+        
+        input.name-input { 
+            color: white !important; width: 100%; border: none; 
+            border-bottom: 2px dashed var(--gwen-pink); 
+            margin-bottom: 5px; font-size: 1.1em; padding: 5px;
+            text-align: center; font-family: 'Permanent Marker';
+        }
+        input.name-input::placeholder { color: rgba(255,255,255,0.5); }
+
+        .btn-icon { 
+            width: 45px; height: 45px; border: 2px solid black; 
+            font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; 
+            box-shadow: 3px 3px 0px black; transform: skew(-5deg); transition: transform 0.1s;
+        }
+        .btn-icon:active { transform: skew(-5deg) translate(2px, 2px); box-shadow: 1px 1px 0px black;}
+        .btn-dj { background: var(--gwen-blue); color: black; font-size: 1.5em;}
+        .btn-yt { background: var(--miles-red); color: white; font-size: 1.5em;}
+
+        .tools-container, .queue-box, .history-box { 
+            width: 90%; max-width: 350px; margin-top: 15px;
+            background: rgba(0,0,0,0.8); border: 2px solid white; padding: 10px;
+            box-shadow: 5px 5px 0px rgba(255,255,255,0.2);
+        }
+
+        .input-group { 
+            background: white; padding: 2px; display: flex; border: 2px solid black; 
+            margin-top: 5px; transform: skew(-2deg);
+        }
+
+        .queue-title { 
+            color: var(--gwen-blue); font-family: 'Bangers'; font-size: 1.2em; 
+            text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0px black;
+        }
+        .queue-item, .history-item { 
+            font-size: 0.85em; padding: 8px 0; border-bottom: 1px dashed #444; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .top-bar { width: 100%; display: flex; justify-content: space-between; padding: 15px 20px; box-sizing: border-box; font-weight: bold; }
+        
+        .live-badge { 
+            background: var(--miles-red); color: white; padding: 5px 15px; 
+            font-family: 'Bangers'; letter-spacing: 1px; transform: skew(-10deg); border: 2px solid white;
+            animation: parpadeo 0.5s infinite step-end;
+        }
+        @keyframes parpadeo { 0% {opacity: 1;} 50% {opacity: 0.8;} 100% {opacity: 1;} }
+
+        .start-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background-image: radial-gradient(var(--miles-red) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .start-screen span { font-size: 5em; margin-bottom: 10px; filter: drop-shadow(4px 4px 0px var(--gwen-blue)); }
+        
+        .login-box {
+            background: black; border: 4px solid white; padding: 20px;
+            transform: skew(-5deg); box-shadow: 10px 10px 0px var(--miles-red);
+            display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 300px;
+        }
+        
+        .start-input {
+            background: white !important; color: black !important;
+            font-family: 'Permanent Marker'; font-size: 1.2em; text-align: center;
+            border: 2px solid black; padding: 10px; outline: none;
+        }
+        
+        .btn-enter {
+            background: var(--glitch-green); color: black; border: 2px solid black;
+            font-family: 'Bangers'; font-size: 1.5em; padding: 10px; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn-enter:active { transform: scale(0.95); }
+
+        .lock-btn { margin-top: 30px; background: none; border: none; font-size: 1.5em; opacity: 0.5; cursor: pointer; filter: grayscale(100%); }
+        .admin-panel { display: none; margin-top: 20px; border: 3px solid var(--miles-red); padding: 10px; width: 90%; background: black; transform: rotate(1deg);}
+        .btn-admin { background: var(--miles-red); color: white; border: 2px solid white; padding: 5px 10px; font-family: 'Bangers'; cursor: pointer; }
+        .volumen-container { display: flex; gap: 10px; margin-top: 15px; width: 80%; justify-content: center; align-items: center; }
+        input[type=range] {accent-color: var(--gwen-pink); cursor: pointer; width: 100%;}
+    </style>
+</head>
+<body>
+    <div class="backdrop"></div>
+    
+    <div class="top-bar">
+        <div class="live-badge" onclick="forzarSincronizacion()">● EN VIVO</div>
+        <div class="listeners" style="font-family: 'Bangers'; font-size: 1.2em;">🕸️ <span id="num-oyentes">0</span></div>
+    </div>
+
+    <div class="start-screen" id="pantallaInicio">
+        <span>🕷️</span>
+        <div class="login-box">
+            <div style="font-family:'Bangers'; font-size:1.5em; color:white;">¿QUIÉN ERES?</div>
+            <input type="text" id="nombreLogin" class="start-input" placeholder="Tu Nombre">
+            <button class="btn-enter" onclick="intentarEntrar()">ENTRAR A LA RADIO</button>
+        </div>
+    </div>
+    
+    <img src="{{ url_for('static', filename='fondo.jpg') }}" class="album-art" id="portada" onerror="this.src='{{ url_for('static', filename='fondo.jpg') }}'">
+    
+    <h3 id="artista">ESPERANDO SEÑAL...</h3>
+    <h2 id="titulo">RADIO SPIDER</h2>
+    
+    <div id="barra-progreso"><div id="progreso-relleno"></div></div>
+    
+    <div class="volumen-container">
+        <span>🔇</span>
+        <input type="range" min="0" max="1" step="0.1" value="1" id="volumenControl" oninput="cambiarVolumenGeneral(this.value)">
+        <span>🔊</span>
+    </div>
+
+    <div class="tools-container">
+        <div class="chat-box" style="background:transparent; border:none; padding:0;">
+            <input type="text" id="userName" class="name-input" placeholder="Tu Nombre" onchange="guardarNombre()">
+            <div class="input-group">
+                <input type="text" id="djInput" placeholder="Mensaje al aire..." onkeypress="handleEnter(event, 'chat')">
+                <button class="btn-icon btn-dj" onclick="enviarMensaje()">➤</button>
+            </div>
+        </div>
+        <div class="input-group" style="margin-top:10px; border-color: var(--miles-red);">
+            <input type="text" id="ytInput" placeholder="Nombre de canción o Link..." onkeypress="handleEnter(event, 'song')">
+            <button class="btn-icon btn-yt" onclick="descargarYoutube()" style="background: var(--miles-red);">🔎</button>
+        </div>
+        <p id="statusMsg" style="font-family: 'Bangers'; font-size:1em; color:var(--gwen-blue); margin:5px 0 0 0; text-shadow: 1px 1px black;"></p>
+    </div>
+
+    <div class="queue-box">
+        <div class="queue-title">A CONTINUACIÓN 🎵</div>
+        <div id="lista-espera"><div style="color:#777;">La cola está vacía...</div></div>
+    </div>
+
+    <div class="history-box" style="border-color: var(--gwen-pink);">
+        <div class="queue-title" style="color: var(--gwen-pink);">HISTORIAL RECIENTE 📜</div>
+        <div id="lista-historial"><div style="color:#777;">...</div></div>
+    </div>
+
+    <button class="lock-btn" onclick="activarAdmin()">🔐</button>
+    <div class="admin-panel" id="panelAdmin">
+        <h4 style="margin:0 0 10px 0; color:var(--miles-red); font-family:'Bangers';">👑 MODO DIOS</h4>
+        <button class="btn-admin" onclick="saltarCancion()">⏭ SALTAR CANCIÓN</button>
+    </div>
+
+    <audio id="audioPlayer" playsinline webkit-playsinline></audio>
+    <audio id="voicePlayer" playsinline webkit-playsinline></audio>
+
+    <script>
+        const audio = document.getElementById('audioPlayer');
+        const voice = document.getElementById('voicePlayer');
+        const portada = document.getElementById('portada');
+        const fondoDefault = "{{ url_for('static', filename='fondo.jpg') }}";
+        
+        let archivoActual = "";
+        let ultimoMensajeId = parseInt(localStorage.getItem("lastMsgId")) || 0;
+        let esAdmin = false;
+        let claveAdmin = "";
+        let volumenUsuario = 1.0; 
+        let isDucking = false; 
+        let serverTimeTarget = 0; 
+
+        // OPTIMIZACIÓN: Detectar tecla ENTER
+        function handleEnter(e, tipo) {
+            if(e.key === "Enter") {
+                if(tipo === 'chat') enviarMensaje();
+                if(tipo === 'song') descargarYoutube();
+            }
+        }
+
+        if(localStorage.getItem("radioName")) {
+            let n = localStorage.getItem("radioName");
+            document.getElementById("userName").value = n;
+            document.getElementById("nombreLogin").value = n;
+        }
+
+        function guardarNombre() { 
+            let n = document.getElementById("userName").value;
+            localStorage.setItem("radioName", n);
+        }
+
+        function intentarEntrar() {
+            let nombre = document.getElementById("nombreLogin").value;
+            if(!nombre || nombre.trim() === "") {
+                alert("🕷️ ¡Necesitamos tu identidad! Escribe tu nombre.");
+                return;
+            }
+            localStorage.setItem("radioName", nombre);
+            document.getElementById("userName").value = nombre;
+            iniciarRadio();
+        }
+
+        function iniciarRadio() {
+            document.getElementById('pantallaInicio').style.display = 'none';
+            volumenUsuario = parseFloat(document.getElementById('volumenControl').value);
+            audio.volume = volumenUsuario;
+            audio.play().then(() => { audio.pause(); }).catch(e => console.log("Init Audio Fail"));
+            voice.play().then(() => { voice.pause(); }).catch(e => console.log("Init Voice Fail"));
+            sincronizar();
+            setInterval(sincronizar, 2000); 
+        }
+
+        function forzarSincronizacion() {
+            if(serverTimeTarget > 0) {
+                console.log("🔄 Sincronizando...");
+                audio.currentTime = serverTimeTarget;
+                audio.play();
+            }
+        }
+
+        function cambiarVolumenGeneral(val) {
+            volumenUsuario = parseFloat(val);
+            if (isDucking) audio.volume = volumenUsuario * 0.2;
+            else audio.volume = volumenUsuario;
+            voice.volume = volumenUsuario; 
+        }
+
+        function fadeOutMusica() {
+            isDucking = true;
+            let volActual = audio.volume;
+            let objetivo = volumenUsuario * 0.2; 
+            let intervalo = setInterval(() => {
+                if (volActual > objetivo) {
+                    volActual -= 0.05; 
+                    if (volActual < 0) volActual = 0;
+                    audio.volume = volActual;
+                } else {
+                    clearInterval(intervalo);
+                    audio.volume = objetivo; 
+                }
+            }, 50); 
+        }
+
+        function fadeInMusica() {
+            let volActual = audio.volume;
+            let objetivo = volumenUsuario; 
+            let intervalo = setInterval(() => {
+                if (volActual < objetivo) {
+                    volActual += 0.05; 
+                    audio.volume = volActual;
+                } else {
+                    clearInterval(intervalo);
+                    audio.volume = objetivo; 
+                    isDucking = false;
+                }
+            }, 50);
+        }
+
+        function sincronizar() {
+            fetch('/sincronizar')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('titulo').innerText = data.titulo;
+                    document.getElementById('artista').innerText = data.artista;
+                    document.getElementById('num-oyentes').innerText = data.oyentes;
+                    let imagen = data.imagen ? data.imagen : fondoDefault;
+                    
+                    // OPTIMIZACIÓN: Solo actualiza si cambia la imagen
+                    if(portada.src !== imagen) {
+                        portada.src = imagen;
+                    }
+
+                    serverTimeTarget = data.segundo_actual;
+
+                    let listaHTML = "";
+                    if (data.cola.length === 0) listaHTML = '<div style="color:#777;">La cola está vacía...</div>';
+                    else data.cola.forEach((cancion, index) => {
+                        let btn = esAdmin ? `<button class="btn-trash" onclick="borrarDeCola(${index})" style="color:red; font-weight:bold; cursor:pointer;">❌</button>` : "";
+                        listaHTML += `<div class="queue-item"><span>🕷️ ${cancion}</span> ${btn}</div>`;
+                    });
+                    document.getElementById('lista-espera').innerHTML = listaHTML;
+
+                    let histHTML = "";
+                    if (data.historial.length === 0) histHTML = '<div style="color:#777; font-size:0.8em;">...</div>';
+                    else data.historial.forEach(cancion => {
+                        histHTML += `<div class="history-item">${cancion}</div>`;
+                    });
+                    document.getElementById('lista-historial').innerHTML = histHTML;
+
+                    let rutaServidor = "/static/" + data.archivo;
+                    if (archivoActual !== data.archivo) {
+                        archivoActual = data.archivo;
+                        audio.src = rutaServidor;
+                        audio.play().catch(e => console.log("Bloqueado"));
+                        portada.classList.add("playing");
+                    }
+                    
+                    let dif = Math.abs(audio.currentTime - data.segundo_actual);
+                    if (dif > 4) audio.currentTime = data.segundo_actual;
+                    if (audio.paused && archivoActual) audio.play().catch(e => {});
+                    
+                    let porc = (data.segundo_actual / data.duracion_total) * 100;
+                    document.getElementById('progreso-relleno').style.width = porc + "%";
+
+                    if (data.mensaje_overlay && data.mensaje_overlay.id > ultimoMensajeId) {
+                        ultimoMensajeId = data.mensaje_overlay.id;
+                        localStorage.setItem("lastMsgId", ultimoMensajeId);
+                        
+                        voice.src = "/static/" + data.mensaje_overlay.archivo;
+                        voice.load(); 
+                        fadeOutMusica();
+                        
+                        setTimeout(() => {
+                            voice.play().then(() => {}).catch(e => { fadeInMusica(); });
+                        }, 500);
+
+                        voice.onended = function() { fadeInMusica(); };
+                    }
+                });
+        }
+
+        function activarAdmin() {
+            claveAdmin = prompt("Introduce la Clave Maestra:");
+            if(claveAdmin) { document.getElementById('panelAdmin').style.display = 'block'; esAdmin = true; }
+        }
+
+        function saltarCancion() { fetch('/admin/saltar', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({clave: claveAdmin})}); }
+        function borrarDeCola(i) { if(confirm("¿Borrar?")) fetch('/admin/borrar', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({clave: claveAdmin, indice: i})}); }
+        
+        function enviarMensaje() {
+            let v = document.getElementById('djInput').value;
+            let n = document.getElementById('userName').value || "Spidey";
+            if(!v) return;
+            fetch('/mandar_saludo', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: v, nombre: n})});
+            document.getElementById('djInput').value = "";
+            document.getElementById('statusMsg').innerText = "📨 Enviado";
+        }
+        function descargarYoutube() {
+            let v = document.getElementById('ytInput').value;
+            if(!v) return;
+            document.getElementById('statusMsg').innerText = "⏳ Buscando...";
+            fetch('/descargar_youtube', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({link: v})}).then(r => r.json()).then(d => {
+                document.getElementById('statusMsg').innerText = d.status === "ok" ? "✅ En cola" : "❌ Error";
+            });
+            document.getElementById('ytInput').value = "";
+        }
+    </script>
+</body>
+</html>
